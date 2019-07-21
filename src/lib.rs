@@ -19,6 +19,8 @@ mod tests {
         assert_eq!(vec![1,2,3,4,5,6,7,8,9], result);
         let result = merge_sort(vec![8,7,6,5,4,3,2,1], |a, b| a.cmp(&b));
         assert_eq!(vec![1,2,3,4,5,6,7,8], result);
+        let result = merge_sort_cmp(vec![8,7,6,5,4,3,2,1]);
+        assert_eq!(vec![1,2,3,4,5,6,7,8], result);
     }
 
     #[test]
@@ -56,6 +58,11 @@ where
     F: Fn(T, T) -> Ordering
 {
     let compare = Rc::new(Box::new(compare));
+    merge_sort_internal(input, compare)
+}
+
+pub fn merge_sort_cmp<T: Clone + Cmp>(input: Vec<T>) -> Vec<T> {
+    let compare = Rc::new(Box::new(|a, b| a.cmb(&b)));
     merge_sort_internal(input, compare)
 }
 
