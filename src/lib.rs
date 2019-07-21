@@ -1,6 +1,3 @@
-use std::rc::Rc;
-use std::cmp::Ordering;
-
 #[cfg(test)]
 mod tests {
     use std::cmp::Ordering;
@@ -50,29 +47,38 @@ mod tests {
     }
 }
 
+use std::rc::Rc;
+use std::cmp::Ordering;
+
 pub fn merge_sort<T, F>(input: Vec<T>, compare: F) -> Vec<T>
-    where F: Fn(T, T) -> Ordering,
-          T: Clone
+where
+    T: Clone,
+    F: Fn(T, T) -> Ordering
 {
     let compare = Rc::new(Box::new(compare));
     merge_sort_internal(input, compare)
 }
 
 fn merge_sort_internal<T, F>(input: Vec<T>, compare: Rc<Box<F>>) -> Vec<T>
-    where F: Fn(T, T) -> Ordering,
-          T: Clone
+where
+    T: Clone,
+    F: Fn(T, T) -> Ordering
 {
     let len = input.len();
     if len == 1 {
         return input;
     }
     let half_len = len / 2;
-    let mut left = Vec::with_capacity(half_len);
-    left.extend_from_slice(&input[..half_len]);
-    let mut right = Vec::with_capacity(len - half_len);
-    right.extend_from_slice(&input[half_len..]);
-    let left = merge_sort_internal(left, compare.clone());
-    let right = merge_sort_internal(right, compare.clone());
+    let left = {
+        let mut left = Vec::with_capacity(half_len);
+        left.extend_from_slice(&input[..half_len]);
+        merge_sort_internal(left, compare.clone())
+    };
+    let right = {
+        let mut right = Vec::with_capacity(len - half_len);
+        right.extend_from_slice(&input[half_len..]);
+        merge_sort_internal(right, compare.clone())
+    };
     let mut result = Vec::with_capacity(len);
     let mut i = 0;
     let mut j = 0;
