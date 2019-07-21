@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use std::cmp::Ordering;
-    use super::merge_sort;
+    use super::{merge_sort, merge_sort_cmp};
 
     fn compare_f64(a: &f64, b: &f64) -> Ordering {
         if a == b {
@@ -50,7 +50,7 @@ mod tests {
 }
 
 use std::rc::Rc;
-use std::cmp::Ordering;
+use std::cmp::{Ordering, Ord};
 
 pub fn merge_sort<T, F>(input: Vec<T>, compare: F) -> Vec<T>
 where
@@ -61,8 +61,8 @@ where
     merge_sort_internal(input, compare)
 }
 
-pub fn merge_sort_cmp<T: Clone + Cmp>(input: Vec<T>) -> Vec<T> {
-    let compare = Rc::new(Box::new(|a, b| a.cmb(&b)));
+pub fn merge_sort_cmp<T: Clone + Ord>(input: Vec<T>) -> Vec<T> {
+    let compare = Rc::new(Box::new(|a: T, b: T| a.cmp(&b)));
     merge_sort_internal(input, compare)
 }
 
