@@ -56,7 +56,7 @@ mod tests {
         let mut expected: Vec<u32> = Vec::with_capacity(len as usize);
         for i in 0..len {
             actual.push(i / base);
-            expected.push(99 - i % base);
+            expected.push((base - 1) - i % base);
         }
         assert_eq!(actual, merge_sort(&expected, |a, b| a.cmp(&b)));
     }
