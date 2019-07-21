@@ -47,6 +47,19 @@ mod tests {
             merge_sort(&vec![TestStruct{f: 0.5}, TestStruct{f: -0.5}], |a, b| compare_f64(&a.f, &b.f))
         );
     }
+
+    #[test]
+    fn test10k() {
+        let base: u32 = 100;
+        let len = base * base;
+        let mut actual: Vec<u32> = Vec::with_capacity(len as usize);
+        let mut expected: Vec<u32> = Vec::with_capacity(len as usize);
+        for i in 0..len {
+            actual.push(i / base);
+            expected.push(99 - i % base);
+        }
+        assert_eq!(actual, merge_sort(&expected, |a, b| a.cmp(&b)));
+    }
 }
 
 use std::rc::Rc;
