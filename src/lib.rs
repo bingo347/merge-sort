@@ -86,10 +86,20 @@ where
         right.extend_from_slice(&input[half_len..]);
         merge_sort_internal(&right, compare.clone())
     };
-    let mut result = Vec::with_capacity(len);
+    merge(left, right, compare)
+}
+
+fn merge<T, F>(left: Vec<T>, right: Vec<T>, compare: Rc<Box<F>>) -> Vec<T>
+where
+    T: Clone,
+    F: Fn(T, T) -> Ordering
+{
+    let left_len = left.len();
+    let right_len = right.len();
+    let mut result = Vec::with_capacity(left_len + right_len);
     let mut i = 0;
     let mut j = 0;
-    while i < half_len && j < len - half_len {
+    while i < left_len && j < right_len {
         use Ordering::{Equal, Greater, Less};
         match compare(left[i].clone(), right[j].clone()) {
             Equal => {
@@ -107,11 +117,11 @@ where
                 i += 1;
             }
         }
-        if i >= half_len {
+        if i >= left_len {
             result.extend_from_slice(&right[j..]);
             break;
         }
-        if j >= (len - half_len) {
+        if j >= right_len {
             result.extend_from_slice(&left[i..]);
             break;
         }
