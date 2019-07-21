@@ -1,45 +1,57 @@
 use std::rc::Rc;
+use std::cmp::Ordering;
 
 #[cfg(test)]
 mod tests {
+    use std::cmp::Ordering;
     use super::merge_sort;
+
+    fn compare_f64(a: &f64, b: &f64) -> Ordering {
+        if a == b {
+            Ordering::Equal
+        } else if a < b {
+            Ordering::Less
+        } else {
+            Ordering::Greater
+        }
+    }
 
     #[test]
     fn integers() {
-        let result = merge_sort(vec![9,8,7,6,5,4,3,2,1], |a, b| (a - b) as f64);
+        let result = merge_sort(vec![9,8,7,6,5,4,3,2,1], |a, b| a.cmp(&b));
         assert_eq!(vec![1,2,3,4,5,6,7,8,9], result);
-        let result = merge_sort(vec![8,7,6,5,4,3,2,1], |a, b| (a - b) as f64);
+        let result = merge_sort(vec![8,7,6,5,4,3,2,1], |a, b| a.cmp(&b));
         assert_eq!(vec![1,2,3,4,5,6,7,8], result);
     }
 
     #[test]
     fn floats() {
-        let result = merge_sort(vec![9.0,8.0,7.0,6.0,5.0,4.0,3.0,2.0,1.0], |a, b| a - b);
+        let result = merge_sort(vec![9.0,8.0,7.0,6.0,5.0,4.0,3.0,2.0,1.0], |a, b| compare_f64(&a, &b));
         assert_eq!(vec![1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0], result);
-        let result = merge_sort(vec![8.0,7.0,6.0,5.0,4.0,3.0,2.0,1.0], |a, b| a - b);
+        let result = merge_sort(vec![8.0,7.0,6.0,5.0,4.0,3.0,2.0,1.0], |a, b| compare_f64(&a, &b));
         assert_eq!(vec![1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0], result);
     }
 
     #[test]
     fn single_element() {
-        assert_eq!(vec![0], merge_sort(vec![0], |_, _| 0.0))
+        assert_eq!(vec![0], merge_sort(vec![0], |_, _| Ordering::Equal))
     }
 
     #[test]
     fn structs() {
         #[derive(Debug, Clone, PartialEq)]
         struct TestStruct {
-            f: f64
+            pub f: f64
         }
         assert_eq!(
             vec![TestStruct{f: -0.5}, TestStruct{f: 0.5}],
-            merge_sort(vec![TestStruct{f: 0.5}, TestStruct{f: -0.5}], |a, b| a.f - b.f)
+            merge_sort(vec![TestStruct{f: 0.5}, TestStruct{f: -0.5}], |a, b| compare_f64(&a.f, &b.f))
         );
     }
 }
 
 pub fn merge_sort<T, F>(input: Vec<T>, compare: F) -> Vec<T>
-    where F: Fn(T, T) -> f64,
+    where F: Fn(T, T) -> Ordering,
           T: Clone
 {
     let compare = Rc::new(Box::new(compare));
@@ -47,7 +59,7 @@ pub fn merge_sort<T, F>(input: Vec<T>, compare: F) -> Vec<T>
 }
 
 fn merge_sort_internal<T, F>(input: Vec<T>, compare: Rc<Box<F>>) -> Vec<T>
-    where F: Fn(T, T) -> f64,
+    where F: Fn(T, T) -> Ordering,
           T: Clone
 {
     let len = input.len();
@@ -65,22 +77,22 @@ fn merge_sort_internal<T, F>(input: Vec<T>, compare: Rc<Box<F>>) -> Vec<T>
     let mut i = 0;
     let mut j = 0;
     while i < half_len && j < len - half_len {
+        use Ordering::{Equal, Greater, Less};
         match compare(left[i].clone(), right[j].clone()) {
-            k if k == 0.0 => {
+            Equal => {
                 result.push(left[i].clone());
                 result.push(right[j].clone());
                 i += 1;
                 j += 1;
             },
-            k if k > 0.0 => {
+            Greater => {
                 result.push(right[j].clone());
                 j += 1;
             },
-            k if k < 0.0 => {
+            Less => {
                 result.push(left[i].clone());
                 i += 1;
-            },
-            _ => ()
+            }
         }
         if i >= half_len {
             for k in j..(len - half_len) {
