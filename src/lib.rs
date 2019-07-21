@@ -108,15 +108,11 @@ where
             }
         }
         if i >= half_len {
-            for k in j..(len - half_len) {
-                result.push(right[k].clone());
-            }
+            result.extend_from_slice(&right[j..]);
             break;
         }
         if j >= (len - half_len) {
-            for k in i..half_len {
-                result.push(left[k].clone());
-            }
+            result.extend_from_slice(&left[i..]);
             break;
         }
     }
