@@ -1,50 +1,44 @@
 #[cfg(test)]
 mod tests {
-    use std::cmp::Ordering;
-    use super::{merge_sort, merge_sort_cmp};
-
-    fn compare_f64(a: &f64, b: &f64) -> Ordering {
-        if a == b {
-            Ordering::Equal
-        } else if a < b {
-            Ordering::Less
-        } else {
-            Ordering::Greater
-        }
-    }
+    use super::{merge_sort};
 
     #[test]
     fn integers() {
-        let result = merge_sort(&vec![9,8,7,6,5,4,3,2,1], |a, b| a.cmp(&b));
-        assert_eq!(vec![1,2,3,4,5,6,7,8,9], result);
-        let result = merge_sort(&vec![8,7,6,5,4,3,2,1], |a, b| a.cmp(&b));
-        assert_eq!(vec![1,2,3,4,5,6,7,8], result);
-        let result = merge_sort_cmp(&vec![8,7,6,5,4,3,2,1]);
-        assert_eq!(vec![1,2,3,4,5,6,7,8], result);
+        assert_eq!(
+            Ok(vec![1,2,3,4,5,6,7,8,9]),
+            merge_sort(&vec![9,8,7,6,5,4,3,2,1])
+        );
+        assert_eq!(
+            Ok(vec![1,2,3,4,5,6,7,8]),
+            merge_sort(&vec![8,7,6,5,4,3,2,1])
+        );
     }
 
     #[test]
     fn floats() {
-        let result = merge_sort(&vec![9.0,8.0,7.0,6.0,5.0,4.0,3.0,2.0,1.0], |a, b| compare_f64(&a, &b));
-        assert_eq!(vec![1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0], result);
-        let result = merge_sort(&vec![8.0,7.0,6.0,5.0,4.0,3.0,2.0,1.0], |a, b| compare_f64(&a, &b));
-        assert_eq!(vec![1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0], result);
+        assert_eq!(Err("Can't compare"), merge_sort(&vec![std::f64::NAN, std::f64::NAN]));
+        assert_eq!(
+            Ok(vec![1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0]),
+            merge_sort(&vec![9.0,8.0,7.0,6.0,5.0,4.0,3.0,2.0,1.0])
+        );
+        assert_eq!(
+            Ok(vec![1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0]),
+            merge_sort(&vec![8.0,7.0,6.0,5.0,4.0,3.0,2.0,1.0])
+        );
     }
 
     #[test]
     fn single_element() {
-        assert_eq!(vec![0], merge_sort(&vec![0], |_, _| Ordering::Equal))
+        assert_eq!(Ok(vec![0]), merge_sort(&vec![0]));
     }
 
     #[test]
     fn structs() {
-        #[derive(Debug, Clone, PartialEq)]
-        struct TestStruct {
-            pub f: f64
-        }
+        #[derive(Debug, Clone, PartialEq, PartialOrd)]
+        struct TestStruct(f64);
         assert_eq!(
-            vec![TestStruct{f: -0.5}, TestStruct{f: 0.5}],
-            merge_sort(&vec![TestStruct{f: 0.5}, TestStruct{f: -0.5}], |a, b| compare_f64(&a.f, &b.f))
+            Ok(vec![TestStruct(-0.5), TestStruct(0.5)]),
+            merge_sort(&vec![TestStruct(0.5), TestStruct(-0.5)])
         );
     }
 
@@ -58,55 +52,32 @@ mod tests {
             actual.push(i / base);
             expected.push((base - 1) - i % base);
         }
-        assert_eq!(actual, merge_sort(&expected, |a, b| a.cmp(&b)));
+        assert_eq!(Ok(actual), merge_sort(&expected));
     }
 }
 
-use std::rc::Rc;
-use std::cmp::{Ordering, Ord};
+use std::cmp::{Ordering, PartialOrd};
 
-pub fn merge_sort<T, F>(input: &Vec<T>, compare: F) -> Vec<T>
-where
-    T: Clone,
-    F: Fn(T, T) -> Ordering
-{
-    let compare = Rc::new(Box::new(compare));
-    merge_sort_internal(input, compare)
-}
+pub type MergeResult<T> = Result<Vec<T>, &'static str>;
 
-pub fn merge_sort_cmp<T: Clone + Ord>(input: &Vec<T>) -> Vec<T> {
-    let compare = Rc::new(Box::new(|a: T, b: T| a.cmp(&b)));
-    merge_sort_internal(input, compare)
-}
-
-fn merge_sort_internal<T, F>(input: &Vec<T>, compare: Rc<Box<F>>) -> Vec<T>
-where
-    T: Clone,
-    F: Fn(T, T) -> Ordering
-{
+pub fn merge_sort<T: Clone + PartialOrd>(input: &[T]) -> MergeResult<T> {
     let len = input.len();
     if len == 1 {
-        return vec![input[0].clone()];
+        return Ok(vec![input[0].clone()]);
     }
     let half_len = len / 2;
-    let left = {
-        let mut left = Vec::with_capacity(half_len);
-        left.extend_from_slice(&input[..half_len]);
-        merge_sort_internal(&left, compare.clone())
+    let left = match merge_sort(&input[..half_len]) {
+        Ok(r) => r,
+        Err(_) => return Err("Can't compare")
     };
-    let right = {
-        let mut right = Vec::with_capacity(len - half_len);
-        right.extend_from_slice(&input[half_len..]);
-        merge_sort_internal(&right, compare.clone())
+    let right = match merge_sort(&input[half_len..]) {
+        Ok(r) => r,
+        Err(_) => return Err("Can't compare")
     };
-    merge(left, right, compare)
+    merge(left, right)
 }
 
-fn merge<T, F>(left: Vec<T>, right: Vec<T>, compare: Rc<Box<F>>) -> Vec<T>
-where
-    T: Clone,
-    F: Fn(T, T) -> Ordering
-{
+fn merge<T: Clone + PartialOrd>(left: Vec<T>, right: Vec<T>) -> MergeResult<T> {
     let left_len = left.len();
     let right_len = right.len();
     let mut result = Vec::with_capacity(left_len + right_len);
@@ -114,21 +85,24 @@ where
     let mut j = 0;
     while i < left_len && j < right_len {
         use Ordering::{Equal, Greater, Less};
-        match compare(left[i].clone(), right[j].clone()) {
-            Equal => {
-                result.push(left[i].clone());
-                result.push(right[j].clone());
-                i += 1;
-                j += 1;
+        match left[i].partial_cmp(&right[j]) {
+            Some(v) => match v {
+                Equal => {
+                    result.push(left[i].clone());
+                    result.push(right[j].clone());
+                    i += 1;
+                    j += 1;
+                },
+                Greater => {
+                    result.push(right[j].clone());
+                    j += 1;
+                },
+                Less => {
+                    result.push(left[i].clone());
+                    i += 1;
+                }
             },
-            Greater => {
-                result.push(right[j].clone());
-                j += 1;
-            },
-            Less => {
-                result.push(left[i].clone());
-                i += 1;
-            }
+            None => return Err("Can't compare")
         }
         if i >= left_len {
             result.extend_from_slice(&right[j..]);
@@ -139,5 +113,5 @@ where
             break;
         }
     }
-    result
+    Ok(result)
 }
