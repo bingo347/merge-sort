@@ -5,3 +5,10 @@ authors = ["Dmitriy Belyaev <mail@d-belyaev.ru>"]
 edition = "2018"
 
 [dependencies]
+
+[dev-dependencies]
+bencher = "0.1.5"
+
+[[bench]]
+name = "parallel"
+harness = false
