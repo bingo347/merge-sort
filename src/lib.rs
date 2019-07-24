@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use super::{merge_sort, merge_sort_parallel};
+    use super::*;
 
     #[test]
     fn integers() {
