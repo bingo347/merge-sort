@@ -135,13 +135,9 @@ fn merge_sort_internal<T: Clone + PartialOrd>(input: &mut [T], temp: &mut [T]) -
     }
     let half_len = len / 2;
     let left = &mut input[..half_len];
-    if let Err(e) = merge_sort_internal(left, temp) {
-        return Err(e);
-    }
+    merge_sort_internal(left, temp)?;
     let right = &mut input[half_len..];
-    if let Err(e) = merge_sort_internal(right, temp) {
-        return Err(e);
-    }
+    merge_sort_internal(right, temp)?;
     merge(input, temp)
 }
 
