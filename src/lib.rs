@@ -115,10 +115,7 @@ fn merge_sort_parallel_internal<T: 'static + Send + Clone + PartialOrd>(
         let threads = threads / 2;
         thread::spawn(move || merge_sort_parallel_internal(input, threads))
     };
-    let mut right = match merge_sort_parallel_internal(input[half_len..].to_owned(), threads / 2) {
-        Ok(r) => r,
-        Err(e) => return Err(e),
-    };
+    let mut right = merge_sort_parallel_internal(input[half_len..].to_owned(), threads / 2)?;
     let mut left = match handler.join() {
         Ok(left_result) => left_result?,
         Err(_) => return Err("Recive parallel data error"),
