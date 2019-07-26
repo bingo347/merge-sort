@@ -57,7 +57,7 @@ mod tests {
         }
         assert_eq!(Ok(actual), merge_sort(&expected));
     }
-    /*
+
     #[test]
     fn test10k_parallel() {
         let base: u32 = 100;
@@ -69,52 +69,66 @@ mod tests {
             expected.push((base - 1) - i % base);
         }
         assert_eq!(Ok(actual), merge_sort_parallel(&expected, 4));
-    } */
+    }
 }
 
 use std::cmp::{Ordering, PartialOrd};
-// use std::marker::Send;
+use std::marker::Send;
+use std::thread;
 
 pub type MergeResult<T> = Result<T, &'static str>;
-/*
-pub fn merge_sort_parallel<T: 'static + Clone + PartialOrd + Send>(
+
+pub fn merge_sort_parallel<T: 'static + Send + Clone + PartialOrd>(
     input: &[T],
-    threads: u8,
-) -> MergeResult<T> {
-    if threads <= 1 {
-        return merge_sort(input);
+    threads: usize,
+) -> MergeResult<Vec<T>> {
+    if threads != 1 && threads % 2 != 0 {
+        return Err("Threads count must be power of 2");
     }
-    let chunk_len = input.len() / (threads as usize);
-    let rx = {
-        let (tx, rx) = std::sync::mpsc::channel();
-        let mut thread_input = Vec::with_capacity(chunk_len);
-        thread_input.extend_from_slice(&input[..chunk_len]);
-        std::thread::spawn(move || {
-            let input = thread_input;
-            tx.send(merge_sort(&input)).unwrap();
-        });
-        rx
-    };
-    let right = match merge_sort_parallel(&input[chunk_len..], threads - 1) {
-        Ok(r) => r,
-        Err(e) => return Err(e),
-    };
-    let left = match rx.recv() {
-        Ok(left_result) => match left_result {
-            Ok(r) => r,
-            Err(e) => return Err(e),
-        },
-        Err(_) => return Err("Recive parallel data error"),
-    };
-    merge(left, right)
+    merge_sort_parallel_internal(input.to_owned(), threads)
 }
-*/
 
 pub fn merge_sort<T: Clone + PartialOrd>(input: &[T]) -> MergeResult<Vec<T>> {
     let mut input = input.to_owned();
     let mut temp = vec![input[0].clone(); input.len()];
     merge_sort_internal(&mut input, &mut temp)?;
     Ok(input)
+}
+
+pub fn merge_sort_parallel_internal<T: 'static + Send + Clone + PartialOrd>(
+    input: Vec<T>,
+    threads: usize,
+) -> MergeResult<Vec<T>> {
+    if threads <= 1 {
+        let mut input = input;
+        let mut temp = vec![input[0].clone(); input.len()];
+        merge_sort_internal(&mut input, &mut temp)?;
+        return Ok(input);
+    }
+    let len = input.len();
+    if len == 1 {
+        return Ok(input);
+    }
+    let half_len = len / 2;
+    let handler = {
+        let input = input[..half_len].to_owned();
+        let threads = threads / 2;
+        thread::spawn(move || merge_sort_parallel_internal(input, threads))
+    };
+    let mut right = match merge_sort_parallel_internal(input[half_len..].to_owned(), threads / 2) {
+        Ok(r) => r,
+        Err(e) => return Err(e),
+    };
+    let mut left = match handler.join() {
+        Ok(left_result) => left_result?,
+        Err(_) => return Err("Recive parallel data error"),
+    };
+    let mut result: Vec<T> = Vec::with_capacity(len);
+    result.append(&mut left);
+    result.append(&mut right);
+    let mut temp = vec![result[0].clone(); result.len()];
+    merge(&mut result, &mut temp)?;
+    Ok(result)
 }
 
 pub fn merge_sort_internal<T: Clone + PartialOrd>(
