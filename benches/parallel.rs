@@ -14,7 +14,7 @@ fn bench_single_thread(b: &mut Bencher) {
     }
     b.iter(|| merge_sort(&expected).unwrap())
 }
-
+/*
 fn bench_parallel_2(b: &mut Bencher) {
     let base: u32 = 200;
     let len = base * base;
@@ -34,11 +34,11 @@ fn bench_parallel_4(b: &mut Bencher) {
     }
     b.iter(|| merge_sort_parallel(&expected, 4).unwrap())
 }
-
+*/
 benchmark_group!(
     benches,
-    bench_single_thread,
-    bench_parallel_2,
-    bench_parallel_4
+    bench_single_thread // ,
+                        // bench_parallel_2,
+                        // bench_parallel_4
 );
 benchmark_main!(benches);
