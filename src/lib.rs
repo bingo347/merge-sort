@@ -95,7 +95,7 @@ pub fn merge_sort<T: Clone + PartialOrd>(input: &[T]) -> MergeResult<Vec<T>> {
     Ok(input)
 }
 
-pub fn merge_sort_parallel_internal<T: 'static + Send + Clone + PartialOrd>(
+fn merge_sort_parallel_internal<T: 'static + Send + Clone + PartialOrd>(
     input: Vec<T>,
     threads: usize,
 ) -> MergeResult<Vec<T>> {
@@ -131,10 +131,7 @@ pub fn merge_sort_parallel_internal<T: 'static + Send + Clone + PartialOrd>(
     Ok(result)
 }
 
-pub fn merge_sort_internal<T: Clone + PartialOrd>(
-    input: &mut [T],
-    temp: &mut [T],
-) -> MergeResult<()> {
+fn merge_sort_internal<T: Clone + PartialOrd>(input: &mut [T], temp: &mut [T]) -> MergeResult<()> {
     let len = input.len();
     if len == 1 {
         return Ok(());
