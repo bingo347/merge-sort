@@ -128,20 +128,18 @@ fn merge_sort_parallel_internal<T: 'static + Send + Clone + PartialOrd>(
     Ok(result)
 }
 
-fn merge_sort_internal<T: Clone + PartialOrd>(input: &mut [T], temp: &mut [T]) -> MergeResult<()> {
+fn merge_sort_internal<T: PartialOrd>(input: &mut [T], temp: &mut [T]) -> MergeResult<()> {
     let len = input.len();
     if len == 1 {
         return Ok(());
     }
-    let half_len = len / 2;
-    let left = &mut input[..half_len];
+    let (left, right) = input.split_at_mut(len / 2);
     merge_sort_internal(left, temp)?;
-    let right = &mut input[half_len..];
     merge_sort_internal(right, temp)?;
     merge(input, temp)
 }
 
-fn merge<'a, T: Clone + PartialOrd>(input: &mut [T], temp: &mut [T]) -> MergeResult<()> {
+fn merge<T: PartialOrd>(input: &mut [T], temp: &mut [T]) -> MergeResult<()> {
     use Ordering::{Equal, Greater, Less};
     let len = input.len();
     let half_len = len / 2;
@@ -152,17 +150,21 @@ fn merge<'a, T: Clone + PartialOrd>(input: &mut [T], temp: &mut [T]) -> MergeRes
         match input[i].partial_cmp(&input[j]) {
             Some(v) => match v {
                 Equal => {
-                    set_tmp(&mut p, temp, &input[i]);
-                    set_tmp(&mut p, temp, &input[j]);
+                    swap_elements(input, i, temp, p);
+                    p += 1;
                     i += 1;
+                    swap_elements(input, j, temp, p);
+                    p += 1;
                     j += 1;
                 }
                 Greater => {
-                    set_tmp(&mut p, temp, &input[j]);
+                    swap_elements(input, j, temp, p);
+                    p += 1;
                     j += 1;
                 }
                 Less => {
-                    set_tmp(&mut p, temp, &input[i]);
+                    swap_elements(input, i, temp, p);
+                    p += 1;
                     i += 1;
                 }
             },
@@ -171,22 +173,27 @@ fn merge<'a, T: Clone + PartialOrd>(input: &mut [T], temp: &mut [T]) -> MergeRes
     }
     if i < half_len {
         for k in i..half_len {
-            set_tmp(&mut p, temp, &input[k]);
+            swap_elements(input, k, temp, p);
+            p += 1;
         }
     } else if j < len {
         for k in j..len {
-            set_tmp(&mut p, temp, &input[k]);
+            swap_elements(input, k, temp, p);
+            p += 1;
         }
     }
     for i in 0..len {
-        input[i] = temp[i].clone();
+        swap_elements(temp, i, input, i);
     }
     Ok(())
 }
 
-fn set_tmp<T: Clone>(index: &mut usize, temp: &mut [T], value: &T) {
-    temp[*index] = value.clone();
-    *index += 1;
+fn swap_elements<T>(from_slice: &mut [T], from_index: usize, to_slice: &mut [T], to_index: usize) {
+    unsafe {
+        let from_ptr = from_slice.as_mut_ptr().add(from_index);
+        let to_ptr = to_slice.as_mut_ptr().add(to_index);
+        std::ptr::swap(from_ptr, to_ptr);
+    }
 }
 
 fn mk_temp<T>(len: usize) -> Vec<T> {
