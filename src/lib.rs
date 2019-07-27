@@ -85,7 +85,9 @@ pub fn merge_sort_parallel<T: 'static + Send + Clone + PartialOrd>(
     if threads != 1 && threads % 2 != 0 {
         return Err("Threads count must be power of 2");
     }
-    merge_sort_parallel_internal(input.to_owned(), threads)
+    let mut input = input.to_owned();
+    merge_sort_parallel_internal(&mut input, threads)?;
+    Ok(input)
 }
 
 pub fn merge_sort<T: Clone + PartialOrd>(input: &[T]) -> MergeResult<Vec<T>> {
@@ -96,36 +98,40 @@ pub fn merge_sort<T: Clone + PartialOrd>(input: &[T]) -> MergeResult<Vec<T>> {
 }
 
 fn merge_sort_parallel_internal<T: 'static + Send + Clone + PartialOrd>(
-    input: Vec<T>,
+    input: &mut [T],
     threads: usize,
-) -> MergeResult<Vec<T>> {
-    if threads <= 1 {
-        let mut input = input;
-        let mut temp = mk_temp(input.len());
-        merge_sort_internal(&mut input, &mut temp)?;
-        return Ok(input);
-    }
+) -> MergeResult<()> {
     let len = input.len();
     if len == 1 {
-        return Ok(input);
+        return Ok(());
     }
-    let half_len = len / 2;
-    let handler = {
-        let input = input[..half_len].to_owned();
-        let threads = threads / 2;
-        thread::spawn(move || merge_sort_parallel_internal(input, threads))
+    if threads <= 1 {
+        let mut temp = mk_temp(len);
+        merge_sort_internal(input, &mut temp)?;
+        return Ok(());
+    }
+    let mut left = {
+        let (left, right) = input.split_at_mut(len / 2);
+        let handler_left = thread::spawn({
+            let threads = threads / 2;
+            let mut left = left.to_owned();
+            move || {
+                merge_sort_parallel_internal(&mut left, threads)?;
+                Ok(left)
+            }
+        });
+        merge_sort_parallel_internal(right, threads / 2)?;
+        match handler_left.join() {
+            Ok(r) => r?,
+            Err(_) => return Err("Recive parallel data error"),
+        }
     };
-    let mut right = merge_sort_parallel_internal(input[half_len..].to_owned(), threads / 2)?;
-    let mut left = match handler.join() {
-        Ok(left_result) => left_result?,
-        Err(_) => return Err("Recive parallel data error"),
-    };
-    let mut result: Vec<T> = Vec::with_capacity(len);
-    result.append(&mut left);
-    result.append(&mut right);
-    let mut temp = mk_temp(result.len());
-    merge(&mut result, &mut temp)?;
-    Ok(result)
+    for i in 0..(len / 2) {
+        swap_elements(&mut left, i, input, i);
+    }
+    let mut temp = mk_temp(len);
+    merge(input, &mut temp)?;
+    Ok(())
 }
 
 fn merge_sort_internal<T: PartialOrd>(input: &mut [T], temp: &mut [T]) -> MergeResult<()> {
