@@ -126,7 +126,7 @@ fn merge_sort_parallel_internal<T: 'static + Send + Clone + PartialOrd>(
             Err(_) => return Err("Recive parallel data error"),
         }
     };
-    for i in 0..(len / 2) {
+    for i in 0..left.len() {
         swap_elements(&mut left, i, input, i);
     }
     let mut temp = mk_temp(len);
