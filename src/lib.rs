@@ -90,7 +90,7 @@ pub fn merge_sort_parallel<T: 'static + Send + Clone + PartialOrd>(
 
 pub fn merge_sort<T: Clone + PartialOrd>(input: &[T]) -> MergeResult<Vec<T>> {
     let mut input = input.to_owned();
-    let mut temp = vec![input[0].clone(); input.len()];
+    let mut temp = mk_temp(input.len());
     merge_sort_internal(&mut input, &mut temp)?;
     Ok(input)
 }
@@ -101,7 +101,7 @@ fn merge_sort_parallel_internal<T: 'static + Send + Clone + PartialOrd>(
 ) -> MergeResult<Vec<T>> {
     if threads <= 1 {
         let mut input = input;
-        let mut temp = vec![input[0].clone(); input.len()];
+        let mut temp = mk_temp(input.len());
         merge_sort_internal(&mut input, &mut temp)?;
         return Ok(input);
     }
@@ -123,7 +123,7 @@ fn merge_sort_parallel_internal<T: 'static + Send + Clone + PartialOrd>(
     let mut result: Vec<T> = Vec::with_capacity(len);
     result.append(&mut left);
     result.append(&mut right);
-    let mut temp = vec![result[0].clone(); result.len()];
+    let mut temp = mk_temp(result.len());
     merge(&mut result, &mut temp)?;
     Ok(result)
 }
@@ -184,7 +184,15 @@ fn merge<'a, T: Clone + PartialOrd>(input: &mut [T], temp: &mut [T]) -> MergeRes
     Ok(())
 }
 
-fn set_tmp<'a, T: Clone>(index: &mut usize, temp: &mut [T], value: &T) {
+fn set_tmp<T: Clone>(index: &mut usize, temp: &mut [T], value: &T) {
     temp[*index] = value.clone();
     *index += 1;
+}
+
+fn mk_temp<T>(len: usize) -> Vec<T> {
+    let mut temp = Vec::with_capacity(len);
+    unsafe {
+        temp.set_len(len);
+    }
+    temp
 }
